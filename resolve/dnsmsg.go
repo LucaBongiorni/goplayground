@@ -22,9 +22,7 @@
 
 package main
 
-import (
-	"net"
-)
+import "net"
 
 // Integer to decimal.
 func itoa(i int) string {
@@ -914,21 +912,39 @@ func (dns *dnsMsg) String() string {
 	return s
 }
 
-func convertRR_A(records []dnsRR) []net.IP {
+func convertRR_SRV(records []dnsRR) []string {
+	results := []string{}
+	for _, rr := range records {
+		a := rr.(*dnsRR_SRV).Target
+		results = append(results, a)
+	}
+	//fmt.Println(results)
+	return results
+}
+
+func convertRR_A(records []dnsRR) []string {
 	addrs := make([]net.IP, len(records))
 	for i, rr := range records {
 		a := rr.(*dnsRR_A).A
 		addrs[i] = net.IPv4(byte(a>>24), byte(a>>16), byte(a>>8), byte(a))
 	}
-	return addrs
+	s := make([]string, 0, 16)
+	for _, ip := range addrs {
+		s = append(s, ip.String())
+	}
+	return s
 }
 
-func convertRR_AAAA(records []dnsRR) []net.IP {
-        addrs := make([]net.IP, len(records))
-        for i, rr := range records {
-                a := make(net.IP, net.IPv6len)
-                copy(a, rr.(*dnsRR_AAAA).AAAA[:])
-                addrs[i] = a
-        }
-        return addrs
+func convertRR_AAAA(records []dnsRR) []string {
+	addrs := make([]net.IP, len(records))
+	for i, rr := range records {
+		a := make(net.IP, net.IPv6len)
+		copy(a, rr.(*dnsRR_AAAA).AAAA[:])
+		addrs[i] = a
+	}
+	s := make([]string, 0, 16)
+	for _, ip := range addrs {
+		s = append(s, ip.String())
+	}
+	return s
 }

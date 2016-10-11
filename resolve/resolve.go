@@ -48,6 +48,7 @@ var packetsPerSecond int
 var retryTime string
 var verbose bool
 var ipv6 bool
+var srv bool
 
 func init() {
 	flag.StringVar(&dnsServer, "server", "8.8.8.8:53",
@@ -62,6 +63,8 @@ func init() {
 		"Verbose logging")
 	flag.BoolVar(&ipv6, "6", false,
 		"Ipv6 - ask for AAAA, not A")
+	flag.BoolVar(&srv, "srv", false,
+		"SRV - Lookup SRV record.")
 }
 
 func main() {
@@ -142,7 +145,7 @@ type domainRecord struct {
 type domainAnswer struct {
 	id     uint16
 	domain string
-	ips    []net.IP
+	ips    []string //[]net.IP
 }
 
 func do_map_guard(domains <-chan string,
@@ -212,7 +215,7 @@ func do_map_guard(domains <-chan string,
 
 				s := make([]string, 0, 16)
 				for _, ip := range da.ips {
-					s = append(s, ip.String())
+					s = append(s, ip)
 				}
 				sort.Sort(sort.StringSlice(s))
 
@@ -255,6 +258,9 @@ func do_send(c net.Conn, tryResolving <-chan *domainRecord) {
 		} else {
 			t = dnsTypeAAAA
 		}
+		if srv {
+			t = dnsTypeSRV
+		}
 		msg := packDns(dr.domain, dr.id, t)
 
 		_, err := c.Write(msg)
@@ -281,6 +287,10 @@ func do_receive(c net.Conn, resolved chan<- *domainAnswer) {
 		} else {
 			t = dnsTypeAAAA
 		}
+		if srv {
+			t = dnsTypeSRV
+		}
+		//fmt.Println(buf)
 		domain, id, ips := unpackDns(buf[:n], t)
 		resolved <- &domainAnswer{id, domain, ips}
 	}
